@@ -37,12 +37,12 @@ static NSString *kCellIdentifier = @"identifier";
     model.title = i % 2 ? @"标哥的技术博客出品" : @"www.henishuo.com";
     model.desc = @"本demo是研究ColorBlended的，也就是图形混合。研究图形混合问题如何解决又如何避免。欢迎大家关注标哥的技术博客http://www.henishuo.com，关注微博：http://weibo.com/huangyibiao520";
     
-    model.headImg = @"img1";
+    model.headImg = @"img13.jpg";
 
-    NSUInteger rand = arc4random() % 10;
+    NSUInteger rand = arc4random() % 16;
     NSMutableArray *imgs = [[NSMutableArray alloc] init];
     for (NSUInteger j = 1; j <= rand; ++j) {
-      [imgs addObject:[NSString stringWithFormat:@"img%ld", j]];
+      [imgs addObject:[NSString stringWithFormat:@"img%ld.%@", j, j <= 13 ? @"jpg" : @"png"]];
     }
     model.imgs = imgs;
     
@@ -66,10 +66,11 @@ static NSString *kCellIdentifier = @"identifier";
   if (!cell) {
     cell = [[HYBTestCell alloc] initWithStyle:UITableViewCellStyleDefault
                               reuseIdentifier:kCellIdentifier];
+    cell.contentView.backgroundColor = [UIColor whiteColor];
   }
   
   HYBTestModel *model = [self.datasource objectAtIndex:indexPath.row];
-  [cell configCellWithModel:model];
+  [cell configCellWithModel:model isCaculateHeight:NO];
   
   return cell;
 }
@@ -79,7 +80,7 @@ static NSString *kCellIdentifier = @"identifier";
   
   return [HYBTestCell hyb_heightForTableView:tableView config:^(UITableViewCell *sourceCell) {
     HYBTestCell *cell = (HYBTestCell *)sourceCell;
-    [cell configCellWithModel:model];
+    [cell configCellWithModel:model isCaculateHeight:YES];
   } cache:^NSDictionary *{
     return @{kHYBCacheUniqueKey : model.uid,
              kHYBCacheStateKey : @"",

@@ -17,8 +17,13 @@
 @property (nonatomic, copy) NSArray  *imgs;
 @property (nonatomic, copy) NSString *headImg;
 
+
 // 由于可能没有图片，此时不能通过0判断是否缓存过
 @property (nonatomic, assign) CGFloat cacheCollectionViewHeight;
 @property (nonatomic, assign) BOOL hasCache;
+
+
+// 将所处理后的图片缓存起来，这样就不用每次去裁剪了
+@property (nonatomic, strong) NSMutableDictionary *cacheImages;
 
 @end

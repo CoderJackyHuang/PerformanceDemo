@@ -10,11 +10,13 @@
 #import <Masonry.h>
 #import <UITableViewCell+HYBMasonryAutoCellHeight.h>
 #import "HYBTestModel.h"
+#import "UIImage+HYBCrop.h"
 
 @interface HYBTestCell () <UICollectionViewDataSource, UICollectionViewDelegate>
 
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *descLabel;
+@property (nonatomic, strong) CATextLayer *descLayer;
 @property (nonatomic, strong) UIImageView *headImageView;
 @property (nonatomic, strong) UICollectionView *collectionView;
 @property (nonatomic, strong) HYBTestModel *model;
@@ -27,14 +29,17 @@
   if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
     CGFloat screenWidth = [UIScreen mainScreen].bounds.size.width;
     self.selectionStyle = UITableViewCellSelectionStyleNone;
+    self.contentView.backgroundColor = [UIColor whiteColor];
     
     self.headImageView = [[UIImageView alloc] init];
-    self.headImageView.contentMode = UIViewContentModeScaleAspectFill;
     [self.contentView addSubview:self.headImageView];
     [self.headImageView mas_makeConstraints:^(MASConstraintMaker *make) {
       make.left.top.mas_equalTo(10);
-      make.width.height.mas_equalTo(60);
+      make.width.mas_equalTo(60);
+      make.height.mas_equalTo(60);
     }];
+       self.headImageView.contentMode = UIViewContentModeScaleAspectFit;
+    self.headImageView.backgroundColor = [UIColor whiteColor];
     
     // title
     self.titleLabel = [[UILabel alloc] init];
@@ -61,8 +66,18 @@
       make.left.right.mas_equalTo(weakSelf.titleLabel);
       make.top.mas_equalTo(weakSelf.titleLabel.mas_bottom).offset(10);
     }];
-    
     self.descLabel.backgroundColor = self.contentView.backgroundColor;
+    
+    self.descLayer = [CATextLayer layer];
+    [self.descLabel.layer addSublayer:self.descLayer];
+    self.descLayer.alignmentMode = kCAAlignmentLeft;
+    self.descLayer.wrapped = YES;
+    self.descLayer.backgroundColor = self.descLabel.backgroundColor.CGColor;
+    
+    CGFontRef fontRef = CGFontCreateWithFontName((__bridge CFStringRef)self.descLabel.font.fontName);
+    self.descLayer.font = fontRef;
+    self.descLayer.fontSize = self.descLabel.font.pointSize;
+    CGFontRelease(fontRef);
     
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
     layout.scrollDirection = UICollectionViewScrollDirectionVertical;
@@ -85,11 +100,47 @@
   return self;
 }
 
-- (void)configCellWithModel:(HYBTestModel *)model {
+- (void)configCellWithModel:(HYBTestModel *)model isCaculateHeight:(BOOL)isCalulatedHeight {
   self.titleLabel.text = model.title;
   self.descLabel.text = model.desc;
-  NSString *path = [[NSBundle mainBundle] pathForResource:model.headImg ofType:@"jpg"];
-  self.headImageView.image = [UIImage imageNamed:path];
+
+  if (isCalulatedHeight) {
+    self.descLayer.string = model.desc;
+  } else {
+    // 尝试使用CATextLayer解决中文混合问题，未好使
+    // 不知道怎么用才能解决
+    // 后续学习到再更新
+    CGSize size = [model.desc sizeWithFont:self.descLabel.font
+                         constrainedToSize:CGSizeMake(self.descLabel.preferredMaxLayoutWidth, CGFLOAT_MAX)
+                             lineBreakMode:NSLineBreakByCharWrapping];
+    self.descLayer.frame = CGRectMake(0, 0, size.width, size.height);
+  }
+  
+  // 优化前
+//  NSString *path = nil;
+//  if ([model.headImg hasSuffix:@".png"]) {
+//    path = model.headImg;
+//  } else {
+//    path = [[NSBundle mainBundle] pathForResource:model.headImg ofType:nil];
+//  }
+//  UIImage *image = [UIImage imageNamed:path];
+//  self.headImageView.image = image;
+
+  // 优化后
+  dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    NSString *path = nil;
+    if ([model.headImg hasSuffix:@".png"]) {
+      path = model.headImg;
+    } else {
+     path = [[NSBundle mainBundle] pathForResource:model.headImg ofType:nil];
+    }
+    UIImage *image = [[UIImage imageNamed:path] hyb_cropEqualScaleImageToSize:self.headImageView.frame.size];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      self.headImageView.image = image;
+    });
+  });
+  
+  
   self.model = model;
   
   CGFloat height = 0;
@@ -120,13 +171,14 @@
     cell.contentView.backgroundColor = [UIColor whiteColor];
     
     imgView = [[UIImageView alloc] init];
+    imgView.contentMode = UIViewContentModeScaleAspectFit;
     imgView.frame = CGRectMake(0,
                                0,
                                cell.contentView.bounds.size.width,
                                cell.contentView.bounds.size.height - 20);
     [cell.contentView addSubview:imgView];
     imgView.tag = 100;
-    imgView.layer.shadowPath = nil;
+    imgView.backgroundColor = [UIColor whiteColor];
     
     UILabel *titleLabel = [[UILabel alloc] init];
     titleLabel.numberOfLines = 0;
@@ -138,10 +190,40 @@
     titleLabel.backgroundColor = cell.contentView.backgroundColor;
   }
   
-  NSString *imgName = self.model.imgs[indexPath.row];
-  NSString *path = [[NSBundle mainBundle] pathForResource:imgName ofType:@"jpg"];
-  imgView.image = [UIImage imageNamed:path];
+//  NSString *imgName = self.model.imgs[indexPath.row];
+  // 优化前
+//  NSString *path = nil;
+//  if ([imgName hasSuffix:@".png"]) {
+//    path = imgName;
+//  } else {
+//    path = [[NSBundle mainBundle] pathForResource:imgName ofType:nil];
+//  }
+//  UIImage *image = [UIImage imageNamed:path];
+//  imgView.image = image;
   
+NSString *imgName = self.model.imgs[indexPath.row];
+if ([self.model.cacheImages objectForKey:imgName]) {
+  imgView.image = [self.model.cacheImages objectForKey:imgName];
+} else {
+  
+  dispatch_async(dispatch_get_global_queue(0, 0), ^{
+    
+    NSString *path = nil;
+    if ([imgName hasSuffix:@".png"]) {
+      path = imgName;
+    } else {
+      path = [[NSBundle mainBundle] pathForResource:imgName ofType:nil];
+    }
+
+    UIImage *image = [[UIImage imageNamed:path] hyb_cropEqualScaleImageToSize:imgView.frame.size];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      imgView.image = image;
+      if (image) {
+        [self.model.cacheImages setObject:image forKey:imgName];
+      }
+    });
+  });
+}
   return cell;
 }
 

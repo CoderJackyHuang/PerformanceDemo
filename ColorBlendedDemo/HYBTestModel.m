@@ -10,4 +10,12 @@
 
 @implementation HYBTestModel
 
+- (NSMutableDictionary *)cacheImages {
+  if (_cacheImages == nil) {
+    _cacheImages = [[NSMutableDictionary alloc] init];
+  }
+  
+  return _cacheImages;
+}
+
 @end

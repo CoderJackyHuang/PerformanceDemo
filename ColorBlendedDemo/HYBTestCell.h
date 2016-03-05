@@ -12,6 +12,6 @@
 
 @interface HYBTestCell : UITableViewCell
 
-- (void)configCellWithModel:(HYBTestModel *)model;
+- (void)configCellWithModel:(HYBTestModel *)model isCaculateHeight:(BOOL)isCalulatedHeight;
 
 @end
