@@ -46,4 +46,26 @@
   return image;
 }
 
+- (UIImage *)hyb_addCornerRadius:(CGFloat)cornerRadius {
+  CGFloat scale = [UIScreen mainScreen].scale;
+  
+  UIGraphicsBeginImageContextWithOptions(self.size, NO, scale);
+  
+  CGContextRef c = UIGraphicsGetCurrentContext();
+  CGRect rect = CGRectMake(0, 0, self.size.width, self.size.height);
+  
+  UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:rect
+                                                  cornerRadius:cornerRadius];
+  CGContextAddPath(c, path.CGPath);
+  
+  CGContextClip(c);
+  [self drawInRect:rect];
+  CGContextDrawPath(c, kCGPathFillStroke);
+  
+  UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  
+  return image;
+}
+
 @end

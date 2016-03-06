@@ -40,6 +40,8 @@
     }];
        self.headImageView.contentMode = UIViewContentModeScaleAspectFit;
     self.headImageView.backgroundColor = [UIColor whiteColor];
+//    self.headImageView.layer.cornerRadius = 30;
+//    self.headImageView.clipsToBounds = YES;
     
     // title
     self.titleLabel = [[UILabel alloc] init];
@@ -135,7 +137,11 @@
      path = [[NSBundle mainBundle] pathForResource:model.headImg ofType:nil];
     }
     UIImage *image = [[UIImage imageNamed:path] hyb_cropEqualScaleImageToSize:self.headImageView.frame.size];
+    // 添加圆角
+//    image = [image hyb_addCornerRadius:self.headImageView.frame.size.width / 2];
+    
     dispatch_async(dispatch_get_main_queue(), ^{
+      [self.headImageView setNeedsDisplay];
       self.headImageView.image = image;
     });
   });
@@ -167,6 +173,7 @@
   UICollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"identifeir"
                                                                          forIndexPath:indexPath];
   UIImageView *imgView = [cell.contentView viewWithTag:100];
+  
   if (imgView == nil) {
     cell.contentView.backgroundColor = [UIColor whiteColor];
     
@@ -179,6 +186,8 @@
     [cell.contentView addSubview:imgView];
     imgView.tag = 100;
     imgView.backgroundColor = [UIColor whiteColor];
+//    imgView.layer.cornerRadius = 10;
+//    imgView.clipsToBounds = YES;
     
     UILabel *titleLabel = [[UILabel alloc] init];
     titleLabel.numberOfLines = 0;
@@ -188,6 +197,28 @@
     titleLabel.font = [UIFont systemFontOfSize:12];
     titleLabel.frame = CGRectMake(0, imgView.frame.size.height, imgView.frame.size.width, 20);
     titleLabel.backgroundColor = cell.contentView.backgroundColor;
+  }
+  
+  
+  NSUInteger type = 4;
+  if (type == 0) {
+    // 光栅化
+    imgView.layer.shouldRasterize = YES;
+  } else if (type == 1) {
+    imgView.layer.shadowColor = [UIColor redColor].CGColor;
+    imgView.layer.shadowOffset = CGSizeMake(10, 10);
+    imgView.layer.shadowOpacity = 0.8;
+  } else if (type == 2) {
+    // 测试发现未引起离屏渲染
+    imgView.layer.edgeAntialiasingMask = kCALayerTopEdge;
+    imgView.layer.allowsEdgeAntialiasing = NO;
+  } else if (type == 3) {
+    // 透明，发现未引起离屏渲染
+    imgView.opaque = NO;
+    imgView.layer.allowsGroupOpacity = YES;
+  } else if (type == 4) {
+    imgView.layer.cornerRadius = 10;
+    imgView.layer.masksToBounds = YES;
   }
   
 //  NSString *imgName = self.model.imgs[indexPath.row];
@@ -216,6 +247,7 @@ if ([self.model.cacheImages objectForKey:imgName]) {
     }
 
     UIImage *image = [[UIImage imageNamed:path] hyb_cropEqualScaleImageToSize:imgView.frame.size];
+    image = [image hyb_addCornerRadius:10];
     dispatch_async(dispatch_get_main_queue(), ^{
       imgView.image = image;
       if (image) {

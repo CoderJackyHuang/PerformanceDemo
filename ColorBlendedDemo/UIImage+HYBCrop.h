@@ -12,4 +12,6 @@
 
 - (UIImage *)hyb_cropEqualScaleImageToSize:(CGSize)size;
 
+- (UIImage *)hyb_addCornerRadius:(CGFloat)cornerRadius;
+
 @end
